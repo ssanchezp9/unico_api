@@ -234,3 +234,4 @@ tmp/
 # Backup files
 *.bak
 *.backup
+token.json

@@ -16,16 +16,31 @@ def _init_service(credentials_file="credentials.json"):
     global _calendar_service
     if _calendar_service is None:
         creds = None
+        
+        # Prioridad 1: Usar la variable de entorno en producción (Railway)
+        token_json_content = os.getenv("GOOGLE_TOKEN_JSON")
+        if token_json_content:
+            # Si la variable existe, la escribimos en un archivo token.json para que el resto del código la use
+            with open("token.json", "w") as token_file:
+                token_file.write(token_json_content)
+
+        # Prioridad 2: Usar el archivo local token.json (para desarrollo)
         if os.path.exists("token.json"):
             creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+        
+        # Si no hay credenciales válidas, intentar refrescar o crear nuevas
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
+                # Este bloque solo se ejecutará en local si no existe token.json
                 flow = InstalledAppFlow.from_client_secrets_file(credentials_file, SCOPES)
                 creds = flow.run_local_server(port=0)
+            
+            # Guardar las credenciales actualizadas o nuevas en el archivo token.json
             with open("token.json", "w") as token:
                 token.write(creds.to_json())
+        
         _calendar_service = build("calendar", "v3", credentials=creds)
     return _calendar_service
 
